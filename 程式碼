@@ -1,0 +1,83 @@
+# python-project
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+
+reaction_order = int(input("Enter reaction order (0, 1, or 2): "))
+k = float(input("Enter rate constant k (>0): "))
+A0 = float(input("Enter initial concentration of A (mol/L): "))
+t_end = float(input("Enter simulation time (s): "))
+
+if reaction_order not in [0, 1, 2]:
+    raise ValueError("Reaction order must be 0, 1, or 2.")
+if k <= 0:
+    raise ValueError("Rate constant must be positive.")
+if A0 < 0:
+    raise ValueError("Initial concentration must be non-negative.")
+if t_end <= 0:
+    raise ValueError("Simulation time must be positive.")
+
+
+def reaction_rate(t, y):
+    A, B = y
+
+    if reaction_order == 0:
+        r = k
+    elif reaction_order == 1:
+        r = k * A
+    else:  # reaction_order == 2
+        r = k * A**2
+
+    dAdt = -r
+    dBdt = r
+
+    return [dAdt, dBdt]
+
+
+t_span = (0, t_end)
+t_eval = np.linspace(0, t_end, 500)
+y0 = [A0, 0.0]
+
+solution = solve_ivp(
+    reaction_rate,
+    t_span,
+    y0,
+    t_eval=t_eval,
+    method="RK45"
+)
+
+t = solution.t
+A = solution.y[0]
+B = solution.y[1]
+
+
+plt.figure()
+plt.plot(t, A, label='[A]')
+plt.plot(t, B, label='[B]')
+plt.xlabel("Time (s)")
+plt.ylabel("Concentration (mol/L)")
+plt.title("Chemical Reaction Kinetics")
+plt.legend()
+plt.grid()
+plt.show()
+
+
+fig, ax = plt.subplots()
+ax.set_xlim(0, t_end)
+ax.set_ylim(0, max(A0, max(B)) * 1.1)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Concentration (mol/L)")
+ax.set_title("Concentration vs Time (Animation)")
+
+line_A, = ax.plot([], [], label='[A]')
+line_B, = ax.plot([], [], label='[B]')
+ax.legend()
+
+def update(frame):
+    line_A.set_data(t[:frame], A[:frame])
+    line_B.set_data(t[:frame], B[:frame])
+    return line_A, line_B
+
+ani = FuncAnimation(fig, update, frames=len(t), interval=30)
